@@ -10,7 +10,7 @@
 ## 安装
 
 ```bash
-composer require shopunion/shopunion-sdk
+composer require fcwh/shop_sdk
 ```
 
 或放入 `composer.json`：
@@ -18,7 +18,7 @@ composer require shopunion/shopunion-sdk
 ```json
 {
     "require": {
-        "shopunion/shopunion-sdk": "^1.0"
+        "fcwh/shop_sdk": "^1.0"
     }
 }
 ```

@@ -1,5 +1,5 @@
 {
-    "name": "shopunion/shopunion-sdk",
+    "name": "fcwh/shop_sdk",
     "description": "电商联盟统一 SDK：淘宝联盟、多多进宝、京东联盟 - 物料搜索、链接转换、店铺搜索、商品详情",
     "type": "library",
     "license": "MIT",
