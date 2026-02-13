@@ -1,0 +1,40 @@
+{
+    "name": "shopunion/shopunion-sdk",
+    "description": "电商联盟统一 SDK：淘宝联盟、多多进宝、京东联盟 - 物料搜索、链接转换、店铺搜索、商品详情",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "ShopUnion",
+            "email": "dev@shopunion.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "ShopUnion\\SDK\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ShopUnion\\SDK\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "keywords": [
+        "taobao",
+        "pinduoduo",
+        "jd",
+        "affiliate",
+        "cps",
+        "淘宝联盟",
+        "多多进宝",
+        "京东联盟"
+    ]
+}
