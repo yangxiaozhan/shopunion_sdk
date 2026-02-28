@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-api-port="8760">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShopUnion SDK 接口调试工具</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --error: #f85149;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono", "Source Code Pro", monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .layout {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 24px;
+      color: var(--accent);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .row:last-child { margin-bottom: 0; }
+    .field {
+      flex: 1;
+      min-width: 160px;
+    }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    button {
+      padding: 10px 20px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #0d1117;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+    }
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .result {
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 0.8rem;
+      max-height: 400px;
+      overflow: auto;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .result.success { border-color: var(--success); }
+    .result.fail { border-color: var(--error); }
+    .status { font-size: 0.75rem; margin-bottom: 8px; }
+    .status.ok { color: var(--success); }
+    .status.err { color: var(--error); }
+    details {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    details summary {
+      padding: 10px 12px;
+      cursor: pointer;
+      background: var(--bg);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .config-inner { padding: 16px; }
+    .config-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 640px) { .config-grid { grid-template-columns: 1fr; } }
+    .loading { opacity: 0.6; }
+    .debug-section { margin-top: 16px; }
+    .debug-section h3 { font-size: 0.8rem; margin: 0 0 8px; color: var(--muted); }
+    .debug-block { font-size: 0.75rem; padding: 12px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); margin-bottom: 12px; overflow-x: auto; }
+    .debug-block:last-child { margin-bottom: 0; }
+    .debug-block .key { color: var(--accent); }
+    .debug-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .debug-tab { padding: 6px 12px; cursor: pointer; border-radius: 6px; font-size: 0.8rem; background: var(--border); color: var(--muted); border: none; font-family: inherit; }
+    .debug-tab.active { background: var(--accent); color: #0d1117; }
+    .debug-tab-content { display: none; }
+    .debug-tab-content.active { display: block; }
+    .result-body { max-height: 500px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <script>window.doCall=function(){alert('请等待页面加载完成')};</script>
+  <div class="layout">
+    <div id="file-protocol-tip" style="display:none;background:#1c3a5e;border:1px solid var(--accent);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:0.8rem;color:var(--accent)">
+      提示：你正在通过 file:// 打开本页。请先运行 <code>cd tools && php -S localhost:8760</code>，然后访问 <a href="http://localhost:8760" style="color:var(--accent)">http://localhost:8760</a> 以获得最佳体验。
+    </div>
+    <h1>ShopUnion SDK 接口调试工具</h1>
+
+    <div class="card">
+      <h2>选择接口</h2>
+      <div class="row">
+        <div class="field">
+          <label>平台</label>
+          <select id="platform">
+            <option value="taobao">淘宝联盟</option>
+            <option value="pinduoduo">多多进宝</option>
+            <option value="jd">京东联盟</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>接口</label>
+          <select id="method">
+            <option value="materialSearch">物料搜索</option>
+            <option value="linkConvert">链接转换</option>
+            <option value="shopSearch">店铺搜索</option>
+            <option value="itemDetail">商品详情</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>请求参数</h2>
+      <div id="params-container" class="params-grid">
+        <div class="field"><label>关键词</label><input type="text" data-key="keyword" placeholder="手机" value=""></div>
+        <div class="field"><label>页码</label><input type="number" data-key="page_no" value="1"></div>
+        <div class="field"><label>每页数量</label><input type="number" data-key="page_size" value="20"></div>
+        <div class="field"><label>物料ID</label><input type="number" data-key="material_id" value="27939"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <details open>
+        <summary>高级：覆盖配置（可选，留空则使用 config.local.php 或环境变量）</summary>
+        <div class="config-inner">
+          <div class="config-grid" id="config-fields">
+            <div class="field"><label>app_key</label><input type="password" data-config="taobao" data-key="app_key" placeholder="留空使用默认" autocomplete="off"></div>
+            <div class="field"><label>app_secret</label><input type="password" data-config="taobao" data-key="app_secret" placeholder="留空使用默认" autocomplete="off"></div>
+            <div class="field"><label>pid</label><input type="password" data-config="taobao" data-key="pid" placeholder="留空使用默认" autocomplete="off"></div>
+            <div class="field"><label>adzone_id</label><input type="password" data-config="taobao" data-key="adzone_id" placeholder="留空使用默认" autocomplete="off"></div>
+            <div class="field"><label>session</label><input type="password" data-config="taobao" data-key="session" placeholder="留空使用默认" autocomplete="off"></div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <button type="button" id="btn-call" onclick="if(typeof window.doCall==='function')window.doCall();else alert('脚本加载异常')">发起请求</button>
+      <span id="status" class="status"></span>
+      <div id="result-area" style="display:none;">
+        <div class="debug-tabs">
+          <button type="button" class="debug-tab active" data-tab="result">解析结果</button>
+          <button type="button" class="debug-tab" data-tab="request">请求信息</button>
+          <button type="button" class="debug-tab" data-tab="response">响应信息</button>
+        </div>
+        <div id="tab-result" class="debug-tab-content active">
+          <div id="result" class="result result-body"></div>
+        </div>
+        <div id="tab-request" class="debug-tab-content">
+          <div class="debug-section">
+            <h3>请求方法 & URL</h3>
+            <div id="req-method-url" class="debug-block"></div>
+            <h3>请求头</h3>
+            <div id="req-headers" class="debug-block"></div>
+            <h3>请求体</h3>
+            <div id="req-body" class="debug-block result-body"></div>
+          </div>
+        </div>
+        <div id="tab-response" class="debug-tab-content">
+          <div class="debug-section">
+            <h3>状态码</h3>
+            <div id="res-status" class="debug-block"></div>
+            <h3>响应头</h3>
+            <div id="res-headers" class="debug-block"></div>
+            <h3>响应体（原始）</h3>
+            <div id="res-body" class="debug-block result-body"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    try {
+    var PARAMS_TEMPLATES = {
+      taobao: {
+        materialSearch: [
+          { key: 'keyword', label: '关键词', type: 'text', placeholder: '手机' },
+          { key: 'page_no', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
+          { key: 'material_id', label: '物料ID', type: 'number', def: 27939 },
+        ],
+        linkConvert: [
+          { key: 'item_id', label: '商品ID', type: 'text', placeholder: '或 num_iid' },
+          { key: 'content', label: '淘口令/链接', type: 'text', placeholder: '商品URL或淘口令' },
+          { key: 'url', label: 'URL', type: 'text', placeholder: '商品链接' },
+        ],
+        shopSearch: [
+          { key: 'keyword', label: '关键词', type: 'text' },
+          { key: 'page_no', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
+          { key: 'material_id', label: '物料ID', type: 'text', def: '4093' },
+        ],
+        itemDetail: [
+          { key: 'num_iids', label: '商品ID（逗号分隔）', type: 'text', placeholder: '123,456' },
+          { key: 'platform', label: '平台', type: 'number', def: 2 },
+        ],
+      },
+      pinduoduo: {
+        materialSearch: [
+          { key: 'keyword', label: '关键词', type: 'text' },
+          { key: 'page', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
+          { key: 'sort_type', label: '排序', type: 'number', placeholder: '0默认' },
+          { key: 'with_coupon', label: '仅券', type: 'checkbox' },
+        ],
+        linkConvert: [
+          { key: 'goods_sign_list', label: 'goods_sign（逗号分隔）', type: 'text', placeholder: '必填其一' },
+          { key: 'goods_id_list', label: 'goods_id（逗号分隔）', type: 'text', placeholder: '必填其一' },
+          { key: 'pid', label: '推广位PID', type: 'text', placeholder: '覆盖配置' },
+          { key: 'generate_we_app', label: '生成小程序', type: 'checkbox' },
+        ],
+        shopSearch: [
+          { key: 'keyword', label: '关键词', type: 'text' },
+          { key: 'page', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
+        ],
+        itemDetail: [
+          { key: 'goods_sign_list', label: 'goods_sign（逗号分隔）', type: 'text', placeholder: '必填其一' },
+          { key: 'goods_id_list', label: 'goods_id（逗号分隔）', type: 'text', placeholder: '必填其一' },
+        ],
+      },
+      jd: {
+        materialSearch: [
+          { key: 'keyword', label: '关键词', type: 'text' },
+          { key: 'page_index', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
+          { key: 'sort_name', label: '排序字段', type: 'text', placeholder: 'price/deposit' },
+          { key: 'sort', label: '排序方向', type: 'text', placeholder: 'asc/desc' },
+          { key: 'has_coupon', label: '有券', type: 'checkbox' },
+        ],
+        linkConvert: [
+          { key: 'material_id', label: '推广物料URL/SKU', type: 'text', placeholder: '必填' },
+          { key: 'union_id', label: 'unionId', type: 'text', placeholder: '覆盖' },
+          { key: 'position_id', label: 'positionId', type: 'text', placeholder: '覆盖' },
+          { key: 'auto_search', label: '自动搜索', type: 'checkbox', def: true },
+        ],
+        shopSearch: [
+          { key: 'keyword', label: '关键词', type: 'text' },
+          { key: 'page_index', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
+        ],
+        itemDetail: [
+          { key: 'sku_ids', label: 'SKU ID（逗号分隔）', type: 'text', placeholder: '100012345678' },
+        ],
+      },
+    };
+
+    var CONFIG_FIELDS = {
+      taobao: [
+        { key: 'app_key', label: 'app_key' },
+        { key: 'app_secret', label: 'app_secret' },
+        { key: 'pid', label: 'pid（或完整 mm_siteId_memberId_adzoneId）' },
+        { key: 'adzone_id', label: 'adzone_id（或完整 pid）' },
+        { key: 'site_id', label: 'site_id（可选，可由 pid 解析）' },
+        { key: 'session', label: 'session' },
+      ],
+      pinduoduo: [
+        { key: 'client_id', label: 'client_id' },
+        { key: 'client_secret', label: 'client_secret' },
+        { key: 'pid', label: 'pid' },
+      ],
+      jd: [
+        { key: 'app_key', label: 'app_key' },
+        { key: 'app_secret', label: 'app_secret' },
+        { key: 'union_id', label: 'union_id' },
+        { key: 'position_id', label: 'position_id' },
+      ],
+    };
+
+    function renderParams() {
+      var platform = document.getElementById('platform').value;
+      var method = document.getElementById('method').value;
+      var tpl = (PARAMS_TEMPLATES[platform] || {})[method] || [];
+      var container = document.getElementById('params-container');
+      var html = '';
+      for (var i = 0; i < tpl.length; i++) {
+        var f = tpl[i];
+        if (f.type === 'checkbox') {
+          html += '<div class="field"><label>' + f.label + '</label><input type="checkbox" data-key="' + f.key + '"' + (f.def ? ' checked' : '') + '></div>';
+        } else {
+          html += '<div class="field"><label>' + f.label + '</label><input type="' + f.type + '" data-key="' + f.key + '" placeholder="' + (f.placeholder || '') + '" value="' + (f.def != null ? f.def : '') + '"></div>';
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderConfig() {
+      var platform = document.getElementById('platform').value;
+      var fields = CONFIG_FIELDS[platform] || [];
+      var container = document.getElementById('config-fields');
+      var html = '';
+      for (var j = 0; j < fields.length; j++) {
+        var f = fields[j];
+        html += '<div class="field"><label>' + f.label + '</label><input type="password" data-config="' + platform + '" data-key="' + f.key + '" placeholder="留空使用默认" autocomplete="off"></div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function collectParams() {
+      var platform = document.getElementById('platform').value;
+      var method = document.getElementById('method').value;
+      const tpl = (PARAMS_TEMPLATES[platform] || {})[method] || [];
+      const params = {};
+      var els = document.querySelectorAll('#params-container [data-key]');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        var key = el.getAttribute('data-key');
+        var val = el.type === 'checkbox' ? el.checked : el.value;
+        if (val === '' || val === undefined) continue;
+        if (el.type === 'number') val = parseInt(val, 10);
+        if (typeof val === 'string' && val.indexOf(',') >= 0 && (key.indexOf('_list') >= 0 || key === 'goods_sign_list' || key === 'goods_id_list')) {
+          val = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        }
+        params[key] = val;
+      }
+      return params;
+    }
+
+    function collectConfig() {
+      const config = { taobao: {}, pinduoduo: {}, jd: {} };
+      var configEls = document.querySelectorAll('[data-config]');
+      for (var ci = 0; ci < configEls.length; ci++) {
+        var cel = configEls[ci];
+        var p = cel.getAttribute('data-config');
+        var k = cel.getAttribute('data-key');
+        if (cel.value && p && k) config[p][k] = cel.value;
+      }
+      var hasAny = false;
+      for (var pk in config) { if (config.hasOwnProperty(pk) && Object.keys(config[pk]).length > 0) { hasAny = true; break; } }
+      return hasAny ? config : null;
+    }
+
+    function doCall() {
+      var btn = document.getElementById('btn-call');
+      var status = document.getElementById('status');
+      var result = document.getElementById('result');
+      if (!btn || !status || !result) return;
+
+      var platform = document.getElementById('platform').value;
+      var method = document.getElementById('method').value;
+      var params = collectParams();
+      var config = collectConfig();
+
+      var body = { platform: platform, method: method, params: params };
+      if (config) body.config = config;
+
+      var port = document.documentElement.getAttribute('data-api-port') || '8760';
+      var apiPath = window.location.protocol === 'file:' 
+        ? 'http://localhost:' + port + '/api.php' 
+        : './api.php';
+
+      btn.disabled = true;
+      btn.classList.add('loading');
+      status.textContent = '请求中…';
+      status.className = 'status';
+      result.style.display = '';
+
+      fetch(apiPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(function(res) {
+        return res.json().catch(function() { return {}; });
+      }).then(function(data) {
+        var resultEl = document.getElementById('result');
+        var resultArea = document.getElementById('result-area');
+
+        if (data.success) {
+          status.textContent = '成功';
+          status.className = 'status ok';
+          resultEl.textContent = JSON.stringify(data.data, null, 2);
+          resultEl.className = 'result success';
+        } else {
+          status.textContent = data.error || '请求失败';
+          status.className = 'status err';
+          resultEl.textContent = JSON.stringify({ error: data.error, code: data.code, raw: data.raw }, null, 2);
+          resultEl.className = 'result fail';
+        }
+
+        var debug = data.debug || {};
+        var req = debug.request || {};
+        var resp = debug.response || {};
+
+        document.getElementById('req-method-url').textContent = (req.method || '') + ' ' + (req.url || '-');
+        document.getElementById('req-headers').textContent = Object.keys(req.headers || {}).length
+          ? JSON.stringify(req.headers, null, 2) : '(无)';
+        var reqBody = req.body || '(空)';
+        if (reqBody !== '(空)' && reqBody.indexOf('=') >= 0 && reqBody.indexOf('{') !== 0) {
+          var obj = {};
+          reqBody.split('&').forEach(function(s) {
+            var idx = s.indexOf('=');
+            if (idx > 0) {
+              obj[decodeURIComponent(s.substring(0, idx))] = decodeURIComponent((s.substring(idx + 1) || '').replace(/\+/g, ' '));
+            }
+          });
+          reqBody = JSON.stringify(obj, null, 2);
+        }
+        document.getElementById('req-body').textContent = reqBody;
+
+        document.getElementById('res-status').textContent = String(resp.status != null ? resp.status : '-');
+        document.getElementById('res-headers').textContent = Object.keys(resp.headers || {}).length
+          ? JSON.stringify(resp.headers, null, 2) : '(无)';
+        var resBody = resp.body != null ? resp.body : '(空)';
+        try {
+          var parsed = JSON.parse(resBody);
+          resBody = JSON.stringify(parsed, null, 2);
+        } catch (e) {}
+        document.getElementById('res-body').textContent = resBody;
+
+        resultArea.style.display = 'block';
+      }).catch(function(e) {
+        status.textContent = '请求失败: ' + e.message;
+        status.className = 'status err';
+        var errMsg = e.message;
+        if (e.message === 'Failed to fetch' && window.location.protocol === 'file:') {
+          errMsg = '请先用命令行启动服务：cd tools && php -S localhost:8760\n然后访问 http://localhost:8760 使用本工具';
+        }
+        document.getElementById('result').textContent = errMsg + (e.stack ? '\n\n' + e.stack : '');
+        document.getElementById('result').className = 'result fail';
+        document.getElementById('result-area').style.display = 'block';
+        document.getElementById('req-method-url').textContent = '-';
+        document.getElementById('req-headers').textContent = '(请求未发出)';
+        document.getElementById('req-body').textContent = '(空)';
+        document.getElementById('res-status').textContent = '-';
+        document.getElementById('res-headers').textContent = '(无)';
+        document.getElementById('res-body').textContent = '(无)';
+      }).then(function() {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      });
+    }
+
+    function init() {
+      try { renderParams(); } catch (e) { console.error('renderParams', e); }
+      try { renderConfig(); } catch (e) { console.error('renderConfig', e); }
+      if (window.location.protocol === 'file:') {
+        var tip = document.getElementById('file-protocol-tip');
+        if (tip) tip.style.display = 'block';
+      }
+      var btn = document.getElementById('btn-call');
+      if (btn) { btn.onclick = doCall; }
+      var platformEl = document.getElementById('platform');
+      if (platformEl) platformEl.onchange = function() { renderParams(); renderConfig(); };
+      var methodEl = document.getElementById('method');
+      if (methodEl) methodEl.onchange = renderParams;
+      var debugTabs = document.querySelectorAll('.debug-tab');
+      for (var i = 0; i < debugTabs.length; i++) {
+        (function(tab) {
+          tab.onclick = function() {
+            var tabs = document.querySelectorAll('.debug-tab');
+            for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove('active');
+            var contents = document.querySelectorAll('.debug-tab-content');
+            for (var k = 0; k < contents.length; k++) contents[k].classList.remove('active');
+            tab.classList.add('active');
+            var tabId = tab.getAttribute('data-tab');
+            if (tabId) {
+              var el = document.getElementById('tab-' + tabId);
+              if (el) el.classList.add('active');
+            }
+          };
+        })(debugTabs[i]);
+      }
+    }
+    if (typeof doCall === 'function') window.doCall = doCall;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    } catch (e) {
+      window.doCall = function() { alert('脚本错误: ' + (e.message || e)); };
+      if (console && console.error) console.error(e);
+    }
+  </script>
+</body>
+</html>

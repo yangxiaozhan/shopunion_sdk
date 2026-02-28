@@ -4,3 +4,5 @@ composer.lock
 .idea/
 *.swp
 *.swo
+tools/config.local.php
+.env

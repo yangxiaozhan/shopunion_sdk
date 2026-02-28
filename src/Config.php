@@ -49,6 +49,19 @@ final class Config
         return $this->taobao['adzone_id'] ?? null;
     }
 
+    /** 淘宝联盟：site_id（媒体ID），可由 pid 解析 */
+    public function getTaobaoSiteId(): ?string
+    {
+        return $this->taobao['site_id'] ?? null;
+    }
+
+    /** 淘宝联盟：物料ID（物料搜索升级版用，默认 27939） */
+    public function getTaobaoMaterialId(): ?int
+    {
+        $v = $this->taobao['material_id'] ?? $this->taobao['scode_id'] ?? null;
+        return $v === null ? null : (int) $v;
+    }
+
     /** 淘宝联盟：session（部分接口需要会员授权） */
     public function getTaobaoSession(): ?string
     {
@@ -59,6 +72,20 @@ final class Config
     public function getTaobaoGateway(): string
     {
         return $this->taobao['gateway'] ?? 'https://eco.taobao.com/router/rest';
+    }
+
+    /** 淘宝联盟连接超时（秒），默认 15 */
+    public function getTaobaoConnectTimeout(): int
+    {
+        $v = $this->taobao['connect_timeout'] ?? $this->taobao['timeout'] ?? null;
+        return $v !== null ? max(5, (int) $v) : 15;
+    }
+
+    /** 淘宝联盟读取超时（秒），默认 60 */
+    public function getTaobaoReadTimeout(): int
+    {
+        $v = $this->taobao['read_timeout'] ?? $this->taobao['timeout'] ?? null;
+        return $v !== null ? max(10, (int) $v) : 60;
     }
 
     /** 拼多多：client_id (必填) */
