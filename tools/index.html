@@ -178,6 +178,10 @@
             <option value="linkConvert">链接转换</option>
             <option value="shopSearch">店铺搜索</option>
             <option value="itemDetail">商品详情</option>
+            <option value="promotionGoodsList" data-platform-only="taobao">商品列表（权益物料）</option>
+            <option value="createTpwd" data-platform-only="taobao">生成淘口令</option>
+            <option value="materialCategoryList" data-platform-only="taobao">物料分类列表</option>
+            <option value="materialRecommendList" data-platform-only="taobao">物料精选商品列表</option>
           </select>
         </div>
       </div>
@@ -255,9 +259,7 @@
           { key: 'material_id', label: '物料ID', type: 'number', def: 27939 },
         ],
         linkConvert: [
-          { key: 'item_id', label: '商品ID', type: 'text', placeholder: '或 num_iid' },
-          { key: 'content', label: '淘口令/链接', type: 'text', placeholder: '商品URL或淘口令' },
-          { key: 'url', label: 'URL', type: 'text', placeholder: '商品链接' },
+          { key: 'url', label: '推广长链', type: 'text', placeholder: 'uland/s.click/ai/temai.taobao.com 链接' },
         ],
         shopSearch: [
           { key: 'keyword', label: '关键词', type: 'text' },
@@ -266,8 +268,29 @@
           { key: 'material_id', label: '物料ID', type: 'text', def: '4093' },
         ],
         itemDetail: [
-          { key: 'num_iids', label: '商品ID（逗号分隔）', type: 'text', placeholder: '123,456' },
-          { key: 'platform', label: '平台', type: 'number', def: 2 },
+          { key: 'num_iids', label: '商品ID（逗号分隔，最多20个）', type: 'text', placeholder: '123,456' },
+          { key: 'biz_scene_id', label: 'biz_scene_id', type: 'number', placeholder: '1动态ID 2比价 3导购' },
+          { key: 'get_tlj_info', label: '淘礼金剩余', type: 'number', placeholder: '0否 1是' },
+          { key: 'ip', label: 'IP', type: 'text', placeholder: '影响邮费' },
+        ],
+        promotionGoodsList: [
+          { key: 'page_num', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量（最多10）', type: 'number', def: 10 },
+          { key: 'promotion_id', label: '权益物料ID', type: 'number', def: 62191, placeholder: '62191=天猫店铺券' },
+        ],
+        createTpwd: [
+          { key: 'url', label: '推广链接', type: 'text', placeholder: '联盟官方渠道的淘客链接，建议 https 开头' },
+        ],
+        materialCategoryList: [
+          { key: 'subject', label: 'subject', type: 'number', def: 1, placeholder: '1促销2热门3精选4行业5其他' },
+          { key: 'material_type', label: 'material_type', type: 'number', def: 1, placeholder: '1商品2权益' },
+          { key: 'page_no', label: '页码', type: 'number', placeholder: '可选' },
+          { key: 'page_size', label: '每页数量', type: 'number', placeholder: '可选' },
+        ],
+        materialRecommendList: [
+          { key: 'material_id', label: '物料ID', type: 'number', def: 27939, placeholder: '从物料分类列表获取' },
+          { key: 'page_no', label: '页码', type: 'number', def: 1 },
+          { key: 'page_size', label: '每页数量', type: 'number', def: 20 },
         ],
       },
       pinduoduo: {
@@ -341,6 +364,23 @@
         { key: 'position_id', label: 'position_id' },
       ],
     };
+
+    function syncMethodOptions() {
+      var platform = document.getElementById('platform').value;
+      var methodSelect = document.getElementById('method');
+      if (!methodSelect) return;
+      var currentVal = methodSelect.value;
+      var opts = methodSelect.querySelectorAll('option');
+      for (var i = 0; i < opts.length; i++) {
+        var only = opts[i].getAttribute('data-platform-only');
+        if (only) {
+          opts[i].style.display = platform === only ? '' : 'none';
+          if (platform !== only && currentVal === opts[i].value) {
+            methodSelect.value = 'materialSearch';
+          }
+        }
+      }
+    }
 
     function renderParams() {
       var platform = document.getElementById('platform').value;
@@ -515,9 +555,14 @@
       var btn = document.getElementById('btn-call');
       if (btn) { btn.onclick = doCall; }
       var platformEl = document.getElementById('platform');
-      if (platformEl) platformEl.onchange = function() { renderParams(); renderConfig(); };
+      if (platformEl) platformEl.onchange = function() {
+        syncMethodOptions();
+        renderParams();
+        renderConfig();
+      };
       var methodEl = document.getElementById('method');
       if (methodEl) methodEl.onchange = renderParams;
+      syncMethodOptions();
       var debugTabs = document.querySelectorAll('.debug-tab');
       for (var i = 0; i < debugTabs.length; i++) {
         (function(tab) {

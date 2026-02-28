@@ -1,19 +1,26 @@
 # ShopUnion SDK
 
-电商联盟统一 PHP SDK，用于对接 **淘宝联盟**、**多多进宝**、**京东联盟** 的开放 API，支持物料搜索、链接转换、店铺搜索与商品详情。配置通过外部传入，适合公司内部 Composer 引用并发布到 Packagist（或私有 Packagist）。
+电商联盟统一 PHP SDK，用于对接 **淘宝联盟**、**多多进宝**、**京东联盟** 的开放 API。合作方通过 Composer 引入后，使用**自身或平台方提供的配置**即可调用物料搜索、链接转换、店铺搜索、商品详情、商品列表、生成淘口令、物料分类及物料精选等能力。
 
-## 要求
+---
+
+## 合作方如何调用本 SDK
+
+### 一、环境要求
 
 - PHP >= 7.4
-- GuzzleHTTP ^7.0
+- Composer
+- 已开通对应联盟平台并取得 **app_key / app_secret（或 client_id / client_secret）** 及推广位等信息
 
-## 安装
+### 二、安装
+
+在合作方项目中执行：
 
 ```bash
 composer require fcwh/shop_sdk
 ```
 
-或放入 `composer.json`：
+或在 `composer.json` 中增加依赖后执行 `composer update`：
 
 ```json
 {
@@ -23,163 +30,224 @@ composer require fcwh/shop_sdk
 }
 ```
 
-## 配置
+若使用公司私有 Packagist，需在 `composer.json` 中配置 `repositories` 指向本包仓库或私有源。
 
-使用 `ShopUnion\SDK\Config` 传入各平台配置，按需只配置要使用的平台即可。
+### 三、配置与创建客户端
+
+**所有密钥、推广位等均由合作方自行传入**，SDK 不内置任何账号信息。合作方从各自业务配置（环境变量、配置中心、数据库等）中读取后，组装成 `Config` 再创建 `ShopUnionClient`。
 
 ```php
 use ShopUnion\SDK\Config;
 use ShopUnion\SDK\ShopUnionClient;
 
-$config = new Config([
-    // 淘宝联盟（阿里百川/淘宝开放平台）
+// 从合作方自己的配置源读取（示例为数组，实际可来自 .env、数据库等）
+$options = [
     'taobao' => [
-        'app_key'     => '你的app_key',
-        'app_secret'  => '你的app_secret',
-        'pid'         => 'mm_123_456_789',  // 推广位，转链必填；或单独填 adzone_id
-        'adzone_id'   => null,             // 可选，不填则从 pid 最后一段解析
-        'session'     => null,             // 部分接口需要会员授权 session
-        'gateway'     => 'https://eco.taobao.com/router/rest',
+        'app_key'    => getenv('TAOBAO_APP_KEY') ?: '你的淘宝app_key',
+        'app_secret' => getenv('TAOBAO_APP_SECRET') ?: '你的淘宝app_secret',
+        'pid'        => getenv('TAOBAO_PID') ?: 'mm_xxx_xxx_xxx',  // 或 adzone_id
     ],
-    // 多多进宝（拼多多开放平台）
     'pinduoduo' => [
-        'client_id'     => '你的client_id',
-        'client_secret'  => '你的client_secret',
-        'pid'            => '你的推广位pid',  // 转链必填
-        'access_token'   => null,
-        'gateway'        => 'https://gw-api.pinduoduo.com/router',
+        'client_id'     => getenv('PDD_CLIENT_ID') ?: '你的拼多多client_id',
+        'client_secret' => getenv('PDD_CLIENT_SECRET') ?: '你的拼多多client_secret',
+        'pid'           => getenv('PDD_PID') ?: '你的推广位pid',
     ],
-    // 京东联盟
     'jd' => [
-        'app_key'     => '你的app_key',
-        'app_secret'  => '你的app_secret',
-        'union_id'    => '联盟ID',          // 转链必填
-        'position_id' => '推广位ID',
-        'gateway'     => 'https://api.jd.com/routerjson',
+        'app_key'     => getenv('JD_APP_KEY') ?: '你的京东app_key',
+        'app_secret'  => getenv('JD_APP_SECRET') ?: '你的京东app_secret',
+        'union_id'    => getenv('JD_UNION_ID') ?: '联盟ID',
+        'position_id' => getenv('JD_POSITION_ID') ?: '推广位ID',
     ],
-]);
+];
 
+$config = new Config($options);
 $client = new ShopUnionClient($config);
 ```
 
-## 使用方式
+**说明：**
 
-### 淘宝联盟
+- 只需配置将要使用的平台，未使用的平台可省略。
+- 淘宝：必填 `app_key`、`app_secret`；转链/物料等需 `pid`（或 `adzone_id`）。
+- 拼多多：必填 `client_id`、`client_secret`；转链需 `pid`。
+- 京东：必填 `app_key`、`app_secret`；转链需 `union_id`、`position_id`。
+
+### 四、调用方式约定
+
+- **入口**：统一使用 `ShopUnionClient` 实例。
+- **选平台**：通过 `$client->taobao()`、`$client->pinduoduo()`、`$client->jd()` 选择淘宝联盟、多多进宝、京东联盟。
+- **选能力**：在对应平台对象上调用具体方法，传入 `array` 参数，返回值为接口原始结构的 `array`（由各联盟 API 文档定义）。
+
+**通用调用形式：**
 
 ```php
-// 物料搜索
+$result = $client->平台()->方法名([
+    '参数名' => '参数值',
+    // ...
+]);
+```
+
+合作方只需按「平台 → 方法名 → 参数」即可完成调用，无需关心签名、网关等底层细节。
+
+### 五、各平台能力与调用示例
+
+#### 1. 淘宝联盟 `$client->taobao()`
+
+| 方法 | 说明 | 主要参数 |
+|------|------|----------|
+| `materialSearch` | 物料搜索（关键词商品） | keyword, page_no, page_size |
+| `linkConvert` | 长链转短链 | url 或 urls（数组） |
+| `shopSearch` | 店铺搜索 | keyword, page_no, page_size |
+| `itemDetail` | 商品详情（升级版，最多20个） | num_iids 或 item_id |
+| `promotionGoodsList` | 权益物料商品列表 | page_num, page_size, promotion_id(默认62191) |
+| `createTpwd` | 生成淘口令 | url（推广链接） |
+| `materialCategoryList` | 物料分类列表（获取物料 id） | subject(默认1), material_type(默认1) |
+| `materialRecommendList` | 按物料 id 获取商品列表 | material_id（来自分类列表）, page_no, page_size |
+
+```php
+// 示例：关键词搜索
 $result = $client->taobao()->materialSearch([
     'keyword'   => '手机',
     'page_no'   => 1,
     'page_size' => 20,
 ]);
 
-// 链接转换（商品 ID / 淘口令 / URL）
+// 示例：长链转短链
 $result = $client->taobao()->linkConvert([
-    'item_id' => '612345678901',  // 或 'content' => '淘口令', 或 'url' => 'https://...'
+    'url' => 'https://s.click.taobao.com/xxx',
 ]);
 
-// 店铺搜索（精选物料）
-$result = $client->taobao()->shopSearch([
-    'keyword'   => '旗舰店',
-    'page_no'   => 1,
-    'page_size' => 20,
-]);
-
-// 商品详情
-$result = $client->taobao()->itemDetail([
-    'num_iids' => '612345678901,612345678902',  // 或 'item_id' => '612345678901'
+// 示例：先取物料分类，再按物料 id 取商品列表
+$categories = $client->taobao()->materialCategoryList(['subject' => 1, 'material_type' => 1]);
+$goods      = $client->taobao()->materialRecommendList([
+    'material_id' => 27939,
+    'page_no'     => 1,
+    'page_size'   => 20,
 ]);
 ```
 
-### 多多进宝
+#### 2. 多多进宝 `$client->pinduoduo()`
+
+| 方法 | 说明 | 主要参数 |
+|------|------|----------|
+| `materialSearch` | 物料搜索 | keyword, page, page_size |
+| `linkConvert` | 链接转换 | goods_sign_list 或 goods_id_list, pid(可选) |
+| `shopSearch` | 店铺搜索 | keyword, page, page_size |
+| `itemDetail` | 商品详情 | goods_sign_list 或 goods_id_list |
 
 ```php
-// 物料搜索
 $result = $client->pinduoduo()->materialSearch([
     'keyword'   => '手机',
     'page'      => 1,
     'page_size' => 20,
-    'sort_type' => 0,
-    'with_coupon' => true,
 ]);
-
-// 链接转换
 $result = $client->pinduoduo()->linkConvert([
-    'goods_sign_list' => ['xxx'],  // 或 goods_id_list
-    'pid'             => null,    // 不传则用 config 中的 pid
-]);
-
-// 店铺搜索
-$result = $client->pinduoduo()->shopSearch([
-    'keyword'   => '旗舰店',
-    'page'      => 1,
-    'page_size' => 20,
-]);
-
-// 商品详情
-$result = $client->pinduoduo()->itemDetail([
-    'goods_sign_list' => ['xxx'],  // 或 goods_id_list
+    'goods_sign_list' => ['xxx'],
 ]);
 ```
 
-### 京东联盟
+#### 3. 京东联盟 `$client->jd()`
+
+| 方法 | 说明 | 主要参数 |
+|------|------|----------|
+| `materialSearch` | 物料搜索 | keyword, page_index, page_size |
+| `linkConvert` | 链接转换 | material_id（商品链接等） |
+| `shopSearch` | 店铺/商品搜索 | 同 materialSearch |
+| `itemDetail` | 商品详情 | sku_ids |
 
 ```php
-// 物料搜索
 $result = $client->jd()->materialSearch([
     'keyword'    => '手机',
     'page_index' => 1,
     'page_size'  => 20,
-    'has_coupon' => true,
 ]);
-
-// 链接转换
 $result = $client->jd()->linkConvert([
-    'material_id' => 'https://item.jd.com/100012345678.html',  // 或商品链接
-    'union_id'    => null,  // 不传则用 config
-    'position_id' => null,
-]);
-
-// 店铺搜索（京东以商品搜索为主，当前实现为商品搜索）
-$result = $client->jd()->shopSearch(['keyword' => '手机', 'page_index' => 1, 'page_size' => 20]);
-
-// 商品详情
-$result = $client->jd()->itemDetail([
-    'sku_ids' => '100012345678,100012345679',  // 或 sku_ids 数组
+    'material_id' => 'https://item.jd.com/100012345678.html',
 ]);
 ```
 
-## 异常处理
+### 六、返回值与异常
 
-接口调用失败会抛出 `ShopUnion\SDK\Exception\SdkException`，可获取平台错误码与原始响应：
+- **成功**：各方法返回 `array`，结构以对应联盟 API 文档为准（如 `result_list`、`data`、`results` 等），合作方按文档解析即可。
+- **失败**：SDK 会抛出 `ShopUnion\SDK\Exception\SdkException`。合作方应捕获该异常，并根据需要记录日志、返回错误码或提示信息。
 
 ```php
 use ShopUnion\SDK\Exception\SdkException;
 
 try {
     $result = $client->taobao()->materialSearch(['keyword' => '手机']);
+    // 使用 $result 做业务逻辑
 } catch (SdkException $e) {
-    echo $e->getMessage();
-    echo $e->getCodeFromApi();   // 平台 sub_code / error_code
-    print_r($e->getRawResponse()); // 原始返回
+    // 错误信息
+    $message = $e->getMessage();
+    // 平台错误码（若有）
+    $codeFromApi = $e->getCodeFromApi();
+    // 原始响应（便于排查）
+    $raw = $e->getRawResponse();
+    // 合作方在此处理：打日志、返回统一错误格式等
 }
 ```
 
-## 自定义 HTTP 客户端
+### 七、推荐业务流程示例（淘宝）
 
-可注入实现 `ShopUnion\SDK\Http\HttpClientInterface` 的客户端（如自定义超时、代理）：
+合作方常见流程：获取物料/商品 → 取详情 → 转链 → 生成淘口令用于传播。
 
 ```php
-$http = new YourHttpClient();
-$client = new ShopUnionClient($config, $http);
+// 1）获取物料分类下的商品列表
+$list = $client->taobao()->materialRecommendList([
+    'material_id' => 27939,
+    'page_no'     => 1,
+    'page_size'   => 20,
+]);
+
+// 2）根据商品 id 查详情（示例：取列表中第一个商品 id）
+// $itemId = $list['result_list'][0]['item_id'] ?? null;
+
+// 3）长链转短链（合作方自己的推广长链）
+$short = $client->taobao()->linkConvert([
+    'url' => 'https://s.click.taobao.com/xxx',
+]);
+
+// 4）生成淘口令用于分享
+$tpwd = $client->taobao()->createTpwd([
+    'url' => $short['results'][0]['content'] ?? 'https://s.click.taobao.com/xxx',
+]);
+// 淘口令文案：$tpwd['data']['model'] 或 $tpwd['data']['password_simple']
 ```
 
-## 发布到 Packagist
+合作方按自身业务选择其中步骤或调整顺序即可。
 
-1. 在 [packagist.org](https://packagist.org) 注册并提交仓库地址。
-2. 打 tag 发布版本：`git tag v1.0.0 && git push origin v1.0.0`。
-3. 公司内部可使用私有 Packagist 或 Composer 私有源，在项目 `composer.json` 中配置 `repositories` 指向本仓库。
+---
+
+## 配置项说明（可选阅读）
+
+| 平台 | 配置键 | 必填 | 说明 |
+|------|--------|------|------|
+| 淘宝 | app_key, app_secret | 是 | 开放平台应用凭证 |
+| 淘宝 | pid 或 adzone_id | 转链/物料必填 | 推广位，pid 格式 mm_账户_媒体_推广位 |
+| 淘宝 | session | 部分接口 | 会员授权 session |
+| 拼多多 | client_id, client_secret | 是 | 开放平台应用凭证 |
+| 拼多多 | pid | 转链必填 | 推广位 |
+| 京东 | app_key, app_secret | 是 | 开放平台应用凭证 |
+| 京东 | union_id, position_id | 转链必填 | 联盟 ID、推广位 ID |
+
+---
+
+## 高级用法
+
+**自定义 HTTP 客户端**（如超时、代理）：实现 `ShopUnion\SDK\Http\HttpClientInterface` 后注入：
+
+```php
+$client = new ShopUnionClient($config, $yourHttpClient);
+```
+
+**直接调平台原始 API**（淘宝）：`$client->taobao()->call('taobao.xxx.xxx', ['param' => 'value']);`
+
+---
+
+## 发布与版本
+
+- 本包可发布至 [packagist.org](https://packagist.org) 或公司私有 Packagist。
+- 版本发布：打 tag（如 `v1.0.0`）并推送到仓库后，合作方通过 `composer update fcwh/shop_sdk` 获取新版本。
 
 ## 许可证
 

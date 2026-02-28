@@ -62,6 +62,13 @@ final class Config
         return $v === null ? null : (int) $v;
     }
 
+    /** 淘宝联盟：权益物料ID（商品列表 taobao.tbk.dg.optimus.promotion 用，默认 62191 天猫店铺券） */
+    public function getTaobaoPromotionId(): int
+    {
+        $v = $this->taobao['promotion_id'] ?? null;
+        return $v !== null ? (int) $v : 62191;
+    }
+
     /** 淘宝联盟：session（部分接口需要会员授权） */
     public function getTaobaoSession(): ?string
     {

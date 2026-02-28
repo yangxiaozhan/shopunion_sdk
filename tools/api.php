@@ -87,14 +87,20 @@ foreach (['taobao', 'pinduoduo', 'jd'] as $p) {
 }
 
 $validPlatforms = ['taobao', 'pinduoduo', 'jd'];
-$validMethods = ['materialSearch', 'linkConvert', 'shopSearch', 'itemDetail'];
+$validMethods = ['materialSearch', 'linkConvert', 'shopSearch', 'itemDetail', 'promotionGoodsList', 'createTpwd', 'materialCategoryList', 'materialRecommendList'];
 
 if (!in_array($platform, $validPlatforms, true)) {
     echo json_encode(['success' => false, 'error' => 'platform 需为 taobao|pinduoduo|jd']);
     exit;
 }
 if (!in_array($method, $validMethods, true)) {
-    echo json_encode(['success' => false, 'error' => 'method 需为 materialSearch|linkConvert|shopSearch|itemDetail']);
+    echo json_encode(['success' => false, 'error' => 'method 需为 materialSearch|linkConvert|shopSearch|itemDetail|promotionGoodsList|createTpwd|materialCategoryList|materialRecommendList']);
+    exit;
+}
+$taobaoOnlyMethods = ['promotionGoodsList', 'createTpwd', 'materialCategoryList', 'materialRecommendList'];
+if (in_array($method, $taobaoOnlyMethods, true) && $platform !== 'taobao') {
+    $names = ['createTpwd' => '生成淘口令', 'promotionGoodsList' => '商品列表', 'materialCategoryList' => '物料分类列表', 'materialRecommendList' => '物料精选商品列表'];
+    echo json_encode(['success' => false, 'error' => ($names[$method] ?? $method) . '(' . $method . ')仅支持淘宝联盟']);
     exit;
 }
 
